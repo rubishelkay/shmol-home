@@ -1,39 +1,57 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Monitor Test</title>
-  <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #fff;
-      cursor: none;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>shmol.cc</title>
+
+<style>
+html, body {
+margin:0;
+padding:0;
+width:100%;
+height:100%;
+overflow:hidden;
+background:white;
+cursor:none;
+}
+</style>
 </head>
+
 <body>
-  <script>
-    const patterns = [
-      "#fff",
-      "#000",
-      "#f00",
-      "#0f0",
-      "#00f",
-      "repeating-linear-gradient(0deg,#000 0 8px,#fff 8px 16px)",
-      "repeating-linear-gradient(90deg,#000 0 8px,#fff 8px 16px)",
-      "repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/16px 16px"
-    ];
-    let i = 0;
-    const apply = () => (document.body.style.background = patterns[i]);
-    addEventListener("click", () => {
-      i = (i + 1) % patterns.length;
-      apply();
-    }, { passive: true });
-    apply();
-  </script>
+
+<script>
+const patterns = [
+"white",
+"black",
+"red",
+"green",
+"blue",
+"repeating-linear-gradient(0deg, black 0px, black 10px, white 10px, white 20px)",
+"repeating-linear-gradient(90deg, black 0px, black 10px, white 10px, white 20px)",
+"repeating-conic-gradient(black 0 25%, white 0 50%) 0 0 / 12px 12px"
+];
+
+let state = 0;
+let lastTap = 0;
+
+function nextPattern() {
+state = (state + 1) % patterns.length;
+document.body.style.background = patterns[state];
+}
+
+function onTap(e) {
+if (e.cancelable) e.preventDefault();
+const now = Date.now();
+if (now - lastTap < 250) return;
+lastTap = now;
+nextPattern();
+}
+
+document.body.style.background = patterns[state];
+document.addEventListener("pointerdown", onTap, { passive: false });
+document.addEventListener("touchstart", onTap, { passive: false });
+document.addEventListener("click", onTap, { passive: false });
+</script>
+
 </body>
 </html>
