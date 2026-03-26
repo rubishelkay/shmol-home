@@ -47,10 +47,37 @@ lastTap = now;
 nextPattern();
 }
 
+function isFullscreen() {
+return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function enterFullscreen() {
+const el = document.documentElement;
+if (el.requestFullscreen) return el.requestFullscreen();
+if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+}
+
+function exitFullscreen() {
+if (document.exitFullscreen) return document.exitFullscreen();
+if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+}
+
+function onKeyDown(e) {
+if (e.code !== "Space") return;
+if (e.cancelable) e.preventDefault();
+if (document.visibilityState !== "visible") return;
+if (isFullscreen()) {
+exitFullscreen();
+} else {
+enterFullscreen();
+}
+}
+
 document.body.style.background = patterns[state];
 document.addEventListener("pointerdown", onTap, { passive: false });
 document.addEventListener("touchstart", onTap, { passive: false });
 document.addEventListener("click", onTap, { passive: false });
+document.addEventListener("keydown", onKeyDown, { passive: false });
 </script>
 
 </body>
