@@ -23,11 +23,30 @@ height:100%;
 pointer-events:none;
 display:none;
 }
+
+#display-info {
+position:fixed;
+left:16px;
+bottom:16px;
+max-width:min(92vw,520px);
+padding:8px 10px;
+background:#000;
+border:1px solid rgba(255,255,255,.5);
+border-radius:10px;
+color:#e8e8e8;
+font:300 12px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+letter-spacing:.02em;
+white-space:pre-wrap;
+display:none;
+pointer-events:none;
+z-index:20;
+}
 </style>
 </head>
 
 <body>
 <canvas id="dead-pixels"></canvas>
+<div id="display-info"></div>
 
 <script>
 const patterns = [
@@ -45,8 +64,11 @@ let state = 0;
 let lastTap = 0;
 let deadPixelsOn = false;
 let deadPixels = null;
+let infoOn = false;
+let refreshHz = null;
 const deadPixelsCanvas = document.getElementById("dead-pixels");
 const deadPixelsCtx = deadPixelsCanvas.getContext("2d");
+const infoEl = document.getElementById("display-info");
 
 function buildDeadPixels(count) {
 const w = window.innerWidth;
@@ -83,6 +105,59 @@ deadPixelsCanvas.style.display = "block";
 } else {
 deadPixelsCanvas.style.display = "none";
 }
+}
+
+function colorGamut() {
+if (matchMedia("(color-gamut: rec2020)").matches) return "rec2020";
+if (matchMedia("(color-gamut: p3)").matches) return "display-p3";
+if (matchMedia("(color-gamut: srgb)").matches) return "sRGB";
+return "unknown";
+}
+
+function dynamicRange() {
+if (matchMedia("(dynamic-range: high)").matches) return "HDR";
+if (matchMedia("(dynamic-range: standard)").matches) return "SDR";
+return "unknown";
+}
+
+function updateDisplayInfo() {
+if (!infoOn) return;
+const lines = [
+`Info`,
+`Resolution: ${screen.width}x${screen.height}`,
+`Refresh rate: ${refreshHz ? `${refreshHz} Hz (est.)` : "measuring..."}`,
+`Color depth: ${screen.colorDepth || "n/a"}-bit`,
+`Color space: ${colorGamut()}`,
+`Dynamic range: ${dynamicRange()}`,
+`DPR: ${window.devicePixelRatio || 1}`,
+`Fullscreen: ${isFullscreen() ? "on" : "off"}`
+];
+infoEl.textContent = lines.join("\n");
+}
+
+function toggleDisplayInfo() {
+infoOn = !infoOn;
+infoEl.style.display = infoOn ? "block" : "none";
+updateDisplayInfo();
+}
+
+function measureRefreshRate() {
+const samples = [];
+let prev = 0;
+let n = 0;
+function step(ts) {
+if (prev) samples.push(ts - prev);
+prev = ts;
+n++;
+if (n < 45) {
+requestAnimationFrame(step);
+return;
+}
+const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+refreshHz = Math.round(1000 / avg);
+updateDisplayInfo();
+}
+requestAnimationFrame(step);
 }
 
 function nextPattern() {
@@ -127,6 +202,11 @@ return;
 if (e.key && e.key.toLowerCase() === "d") {
 if (e.cancelable) e.preventDefault();
 toggleDeadPixels();
+return;
+}
+if (e.key && e.key.toLowerCase() === "i") {
+if (e.cancelable) e.preventDefault();
+toggleDisplayInfo();
 }
 }
 
@@ -135,9 +215,13 @@ document.addEventListener("pointerdown", onTap, { passive: false });
 document.addEventListener("touchstart", onTap, { passive: false });
 document.addEventListener("click", onTap, { passive: false });
 document.addEventListener("keydown", onKeyDown, { passive: false });
+document.addEventListener("fullscreenchange", updateDisplayInfo);
+document.addEventListener("webkitfullscreenchange", updateDisplayInfo);
 window.addEventListener("resize", () => {
 if (deadPixelsOn) drawDeadPixels();
+updateDisplayInfo();
 });
+measureRefreshRate();
 </script>
 
 </body>
