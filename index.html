@@ -61,6 +61,62 @@ pointer-events:none;
 display:none;
 z-index:24;
 }
+
+#hotkey-help {
+position:fixed;
+inset:0;
+z-index:50;
+display:none;
+align-items:center;
+justify-content:center;
+padding:16px;
+box-sizing:border-box;
+cursor:auto;
+}
+#hotkey-help.open {
+display:flex;
+}
+#hotkey-help-backdrop {
+position:absolute;
+inset:0;
+background:rgba(0,0,0,.42);
+cursor:pointer;
+}
+#hotkey-help-panel {
+position:relative;
+max-width:min(92vw,300px);
+padding:10px 12px 11px;
+background:#121212;
+border:1px solid rgba(255,255,255,.38);
+border-radius:10px;
+color:#e6e6e6;
+font:300 11.5px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+letter-spacing:.015em;
+box-shadow:0 8px 28px rgba(0,0,0,.45);
+}
+#hotkey-help-panel h2 {
+margin:0 0 8px;
+font-size:11px;
+font-weight:500;
+letter-spacing:.06em;
+text-transform:uppercase;
+color:#bbb;
+}
+#hotkey-help-panel ul {
+margin:0;
+padding:0 0 0 14px;
+}
+#hotkey-help-panel li {
+margin:0 0 4px;
+}
+#hotkey-help-panel li:last-child {
+margin-bottom:0;
+}
+#hotkey-help-panel kbd {
+font:inherit;
+font-weight:500;
+color:#fff;
+}
 </style>
 </head>
 
@@ -69,6 +125,24 @@ z-index:24;
 <canvas id="hypno"></canvas>
 <canvas id="taxi"></canvas>
 <div id="display-info"></div>
+<div id="hotkey-help" aria-hidden="true">
+<div id="hotkey-help-backdrop"></div>
+<div id="hotkey-help-panel" role="dialog" aria-label="Shortcuts">
+<h2>Shortcuts</h2>
+<ul>
+<li><kbd>Click</kbd> / tap — next test pattern</li>
+<li><kbd>Space</kbd> — fullscreen on / off</li>
+<li><kbd>D</kbd> — dead pixels overlay on / off</li>
+<li><kbd>I</kbd> — display info panel on / off</li>
+<li><kbd>T</kbd> — taxi flash (checkerboard)</li>
+<li>Triple swipe up (touch) — taxi half-screen</li>
+<li><kbd>G</kbd> — spiral (B/W); quick second <kbd>G</kbd> — rainbow spiral</li>
+<li><kbd>G</kbd> while spiral runs — off</li>
+<li><kbd>H</kbd> + <kbd>K</kbd> — this list (hold one, press the other)</li>
+<li><kbd>Esc</kbd> — close this list</li>
+</ul>
+</div>
+</div>
 
 <script>
 const patterns = [
@@ -457,8 +531,37 @@ if (document.exitFullscreen) return document.exitFullscreen();
 if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
 }
 
+const keysDown = new Set();
+const hotkeyHelpEl = document.getElementById("hotkey-help");
+const hotkeyHelpBackdrop = document.getElementById("hotkey-help-backdrop");
+
+function toggleHotkeyHelp() {
+const open = hotkeyHelpEl.classList.toggle("open");
+hotkeyHelpEl.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function onKeyUpChord(e) {
+keysDown.delete(e.code);
+}
+
 function onKeyDown(e) {
 if (document.visibilityState !== "visible") return;
+if (!e.repeat) {
+const hHeld = keysDown.has("KeyH");
+const kHeld = keysDown.has("KeyK");
+if ((e.code === "KeyK" && hHeld) || (e.code === "KeyH" && kHeld)) {
+if (e.cancelable) e.preventDefault();
+toggleHotkeyHelp();
+keysDown.add(e.code);
+return;
+}
+}
+keysDown.add(e.code);
+if (e.code === "Escape" && hotkeyHelpEl.classList.contains("open")) {
+if (e.cancelable) e.preventDefault();
+toggleHotkeyHelp();
+return;
+}
 if (e.code === "Space") {
 if (e.cancelable) e.preventDefault();
 if (isFullscreen()) {
@@ -496,6 +599,16 @@ document.addEventListener("pointerdown", onTap, { passive: false });
 document.addEventListener("touchstart", onTap, { passive: false });
 document.addEventListener("click", onTap, { passive: false });
 document.addEventListener("keydown", onKeyDown, { passive: false });
+document.addEventListener("keyup", onKeyUpChord);
+window.addEventListener("blur", () => keysDown.clear());
+hotkeyHelpBackdrop.addEventListener("pointerdown", (e) => {
+e.preventDefault();
+e.stopPropagation();
+if (hotkeyHelpEl.classList.contains("open")) toggleHotkeyHelp();
+});
+document.getElementById("hotkey-help-panel").addEventListener("pointerdown", (e) => {
+e.stopPropagation();
+});
 document.addEventListener("fullscreenchange", updateDisplayInfo);
 document.addEventListener("webkitfullscreenchange", updateDisplayInfo);
 window.addEventListener("resize", () => {
